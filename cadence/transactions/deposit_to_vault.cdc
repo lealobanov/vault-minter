@@ -1,4 +1,4 @@
-import ExampleToken from 0x01
+import "ExampleToken"
 
 // This transaction mints tokens and deposits them into account 0x02's vault
 transaction {
