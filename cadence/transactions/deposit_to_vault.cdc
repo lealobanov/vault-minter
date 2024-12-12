@@ -1,34 +1,32 @@
 import "ExampleToken"
 
-// This transaction mints tokens and deposits them into account 0x02's vault
+// This transaction mints tokens and deposits them into the caller's vault
 transaction {
 
     // Local variable for storing the reference to the minter resource
-    let mintingRef: auth(MintEntitlement) &ExampleToken.VaultMinter
+    let mintingRef: &ExampleToken.VaultMinter
 
-    // Local variable for storing the reference to the Vault of
-    // the account that will receive the newly minted tokens
-    var receiver: Capability<&ExampleToken.Vault{ExampleToken.Receiver}>
+    // Local variable for storing the receiver capability of the caller
+    var receiver: Capability<&{ExampleToken.Receiver}>
 
     prepare(acct: auth(Storage, Capabilities) &Account) {
         // Borrow a reference to the stored, private minter resource
-        self.mintingRef = acct.capabilities.storage.borrow<&ExampleToken.VaultMinter>(
-            from: /storage/MainMinter
+        let minter = acct.storage.borrow<&ExampleToken.VaultMinter>(
+            from: /storage/CadenceFungibleTokenTutorialMinter
         ) ?? panic("Could not borrow a reference to the minter")
+        self.mintingRef = minter
         
-        // Get the public account object for account 0x02
-        let recipient = getAccount(0x02)
-
-        // Get their public receiver capability
-        self.receiver = recipient.capabilities.borrow<&ExampleToken.Vault{ExampleToken.Receiver}>(
-            /public/MainReceiver
-        ) ?? panic("Could not borrow the receiver capability from account 0x02")
+        // Issue a Receiver capability for the caller's Vault
+        let receiverCap = acct.capabilities.storage.issue<&{ExampleToken.Receiver}>(
+            /storage/CadenceFungibleTokenTutorialVault
+        )
+        self.receiver = receiverCap
     }
 
     execute {
-        // Mint 30 tokens and deposit them into the recipient's Vault
+        // Mint 30 tokens and deposit them into the caller's Vault
         self.mintingRef.mintTokens(amount: 30.0, recipient: self.receiver)
 
-        log("30 tokens minted and deposited to account 0x02")
+        log("30 tokens minted and deposited to the caller's account")
     }
 }
